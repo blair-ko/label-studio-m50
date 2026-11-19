@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f5ef">
+<meta name="description" content="為 Kodak M50 設計、編輯並列印自訂標籤。">
+<title>Label Studio · 標籤製作</title>
+<link rel="icon" href="mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="brand"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h7l7 7a2 2 0 0 1 0 2l-7 7a2 2 0 0 1-2 0l-7-7Z"/><circle cx="8.5" cy="8.5" r="1"/></svg></div><div><strong>Label Studio</strong><span>標籤製作工作室</span></div></div>
+  <div class="header-actions">
+    <button id="connect" class="button secondary"><span id="device-dot" class="dot"></span><span id="connection">連接 M50</span></button>
+    <button id="print" class="button primary"><span data-ui-icon="print"></span>列印標籤</button>
+  </div>
+</header>
+
+<main class="studio">
+  <aside class="library panel" aria-label="素材庫">
+    <div class="panel-top"><h2>素材庫</h2><button id="import-graphic" class="icon-button" title="匯入 SVG 或圖片" aria-label="匯入 SVG 或圖片"><span data-ui-icon="upload"></span></button></div>
+    <div class="tabs" aria-label="素材分類">
+      <button data-tab="elements" aria-pressed="true">元素</button>
+      <button data-tab="templates" aria-pressed="false">樣板</button>
+    </div>
+    <div id="assets"></div>
+  </aside>
+
+  <section class="workspace" aria-label="標籤畫布">
+    <div class="workspace-header">
+      <div class="label-strip">
+        <div id="label-tabs" class="label-tabs" role="tablist" aria-label="專案中的標籤"></div>
+        <div class="label-actions" role="group" aria-label="管理標籤">
+          <button id="add-label" class="icon-button add-label" type="button" title="新增空白標籤" aria-label="新增空白標籤"><span aria-hidden="true">+</span></button>
+          <button id="duplicate-label" class="icon-button" type="button" title="複製這張標籤" aria-label="複製這張標籤"><span data-ui-icon="duplicate"></span></button>
+          <button id="delete-label" class="icon-button danger" type="button" title="刪除這張標籤" aria-label="刪除這張標籤"><span data-ui-icon="trash"></span></button>
+        </div>
+      </div>
+      <div class="workspace-top">
+        <div class="project"><label for="title">標籤名稱</label><input id="title" maxlength="70" autocomplete="off"></div>
+        <div class="actions">
+          <button id="undo" class="icon-button" title="復原" aria-label="復原"><span data-ui-icon="undo"></span></button>
+          <button id="redo" class="icon-button" title="重做" aria-label="重做"><span data-ui-icon="redo"></span></button>
+          <span class="divider"></span>
+          <button id="export" class="icon-button" title="匯出與匯入" aria-label="匯出與匯入"><span data-ui-icon="download"></span></button>
+        </div>
+      </div>
+    </div>
+    <div class="editing-area" id="editing-area" role="tabpanel" aria-label="目前標籤" tabindex="0">
+      <div class="size-ruler"><span></span><output id="ruler"></output><span></span></div>
+      <div id="paper" class="paper">
+        <svg id="art" xmlns="http://www.w3.org/2000/svg" aria-label="標籤設計"></svg>
+        <textarea id="inline-text" aria-label="編輯畫布文字" maxlength="500" hidden></textarea>
+      </div>
+      <p id="canvas-help" class="canvas-help">白色區域為標籤範圍</p>
+    </div>
+    <div class="workspace-bottom">
+      <div class="paper-info"><span data-ui-icon="ruler"></span><span id="summary-size"></span><span class="resolution">203 dpi</span></div>
+      <div class="zoom" aria-label="縮放"><button id="zoom-out" class="icon-button" aria-label="縮小">−</button><button id="zoom-fit" class="zoom-value" title="縮放至適合畫布">100%</button><button id="zoom-in" class="icon-button" aria-label="放大">+</button></div>
+    </div>
+  </section>
+
+  <aside class="inspector panel" aria-label="編輯設定">
+    <div class="section"><h2>標籤尺寸</h2>
+      <div id="presets" class="presets"></div>
+      <div class="fields"><label>長度（mm）<input id="length" type="number" min="10" max="100" step="0.5"></label><label>高度（mm）<input id="height" type="number" min="5" max="14" step="0.5"></label></div>
+      <div class="fields corner-settings">
+        <label for="corner-radius">圓角半徑（mm）<input id="corner-radius" type="number" min="0" max="7" step="0.1" aria-describedby="corner-hint"></label>
+        <span id="corner-hint">0 為直角</span>
+      </div>
+    </div>
+    <div class="section properties"><div class="panel-top"><h2>物件設定</h2><span id="object-type"></span></div><div id="properties"></div></div>
+    <div class="section layer-section"><h2>圖層</h2><div id="layers"></div></div>
+  </aside>
+</main>
+<footer class="footer"><span id="status" role="status" aria-live="polite">標籤會自動儲存在目前瀏覽器。</span><span class="footer-device">KODAK M50</span></footer>
+
+<dialog id="export-dialog" aria-labelledby="export-heading">
+  <form method="dialog" class="dialog-title"><h2 id="export-heading">匯出與匯入</h2><button class="icon-button" aria-label="關閉">×</button></form>
+  <div class="dialog-grid">
+    <button class="button secondary" data-file="svg">下載 SVG</button>
+    <button class="button secondary" data-file="png">下載 PNG</button>
+    <button class="button secondary" data-file="json">下載這張設計檔</button>
+    <button class="button secondary" data-file="project">下載整個專案</button>
+    <button class="button secondary" id="open-project">匯入標籤或專案</button>
+  </div>
+</dialog>
+<dialog id="print-dialog" aria-labelledby="print-heading">
+  <form method="dialog" class="dialog-title"><h2 id="print-heading">列印標籤</h2><button class="icon-button" aria-label="關閉">×</button></form>
+  <div class="print-preview"><img id="print-preview" alt="實際黑白點陣預覽"></div>
+  <p class="dialog-note" id="print-note"></p>
+  <div class="dialog-grid"><button class="button secondary" id="print-png">下載 PNG</button><button class="button primary" id="print-now">送出 1 張</button></div>
+</dialog>
+<input id="graphic-file" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" hidden>
+<input id="project-file" type="file" accept=".json,application/json" hidden>
+<noscript>請啟用 JavaScript 以使用標籤編輯器。</noscript>
+<script type="module" src="studio.mjs"></script>
+</body>
+</html>

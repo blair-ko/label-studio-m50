@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>local.label-studio.m50-bridge</string>
+  <key>CFBundleName</key><string>Label Studio M50</string>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>Label Studio 使用藍牙連接你的 Kodak M50，讀取狀態並列印你送出的標籤。</string>
+</dict>
+</plist>
