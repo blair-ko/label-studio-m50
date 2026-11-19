@@ -1,15 +1,23 @@
 import {fontStacks,paths,shapes,symbols} from './assets.mjs';
+import {komameIcons} from './komame-icons.mjs';
 import {DOTS_PER_MM, bitmapFromImage} from './printer.mjs';
 
 export const round = value => Number(value.toFixed(2));
 export const clamp = (value,min,max) => Math.min(max,Math.max(min,value));
 export const DEFAULT_CORNER_RADIUS = 2;
 export const maxCornerRadius = (length,height) => Math.floor(Math.round(Math.min(length,height)*100)/2)/100;
-const DEFAULT_ICON_STROKE = 1.8;
-const ICON_VIEWBOX = 24;
+const legacyIconStyle = {viewBox:24,stroke:1.8,previewStroke:1.65,ink:'#161916'};
+const komameIconStyle = {viewBox:48,stroke:3.2,previewStroke:3.2,ink:'#000'};
+const getKomameIcon = key => Object.hasOwn(komameIcons,key) ? komameIcons[key] : undefined;
+const iconStyle = key => getKomameIcon(key) ? komameIconStyle : legacyIconStyle;
+export const iconName = key => getKomameIcon(key)?.label ??
+  (Object.hasOwn(symbols,key) ? symbols[key].split(' ')[0] : undefined);
 export const ICON_STROKE_MIN = .04;
 export const ICON_STROKE_MAX = 5;
-export const iconStrokeMm = o => o.iconStroke ?? round(DEFAULT_ICON_STROKE*Math.min(o.w,o.h)/ICON_VIEWBOX);
+export function iconStrokeMm(o) {
+  const {stroke,viewBox}=iconStyle(o.key);
+  return o.iconStroke ?? round(stroke*Math.min(o.w,o.h)/viewBox);
+}
 const num = (value,fallback,min=-Infinity,max=Infinity) => Number.isFinite(value) ? round(clamp(value,min,max)) : fallback;
 export const esc = value => String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[ch]));
 const id = () => crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
@@ -50,7 +58,7 @@ export function normalize(input) {
     items: input.items.slice(0,120).flatMap(o=>{
       if (!o || !['shape','icon','text','image','vector'].includes(o.type)) return [];
       const type=o.type;
-      if ((type==='shape' && !Object.hasOwn(shapes,o.key)) || (type==='icon' && !Object.hasOwn(symbols,o.key))) return [];
+      if ((type==='shape' && !Object.hasOwn(shapes,o.key)) || (type==='icon' && !iconName(o.key))) return [];
       let itemId=typeof o.id === 'string' && /^[a-z0-9-]{1,70}$/i.test(o.id) && !ids.has(o.id) ? o.id : id();
       ids.add(itemId);
       const item={id:itemId,type,key:o.key,w:num(o.w,5,.5,100),h:num(o.h,5,.5,60),
@@ -78,7 +86,9 @@ export function normalize(input) {
 }
 
 export function iconSVG(key) {
-  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[key]}"/></svg>`;
+  const icon=getKomameIcon(key);
+  const {viewBox,previewStroke}=iconStyle(key);
+  return `<svg viewBox="0 0 ${viewBox} ${viewBox}" aria-hidden="true" fill="none" stroke="${icon?'#000':'currentColor'}" stroke-width="${previewStroke}" stroke-linecap="round" stroke-linejoin="round"><path d="${icon?.path ?? paths[key]}"/></svg>`;
 }
 
 const measure = document.createElement('canvas').getContext('2d');
@@ -183,8 +193,9 @@ export function graphic(o) {
   if (o.type==='image') return `<image width="${w}" height="${h}" href="${o.src}" preserveAspectRatio="xMidYMid meet"/>`;
   if (o.type==='vector') return `<svg width="${w}" height="${h}" viewBox="${o.viewBox}">${o.vector}</svg>`;
   if (o.type==='icon') {
-    const stroke=o.iconStroke===undefined ? DEFAULT_ICON_STROKE : o.iconStroke*ICON_VIEWBOX/Math.min(w,h);
-    return `<svg width="${w}" height="${h}" viewBox="0 0 ${ICON_VIEWBOX} ${ICON_VIEWBOX}" overflow="visible" fill="none" stroke="#161916" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[o.key]}"/></svg>`;
+    const {viewBox,stroke:defaultStroke,ink}=iconStyle(o.key);
+    const stroke=o.iconStroke===undefined ? defaultStroke : o.iconStroke*viewBox/Math.min(w,h);
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${viewBox} ${viewBox}" overflow="visible" fill="none" stroke="${ink}" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round"><path d="${getKomameIcon(o.key)?.path ?? paths[o.key]}"/></svg>`;
   }
   const [cx,cy]=[w/2,h/2];
   const fill=o.fill?'#161916':'none';

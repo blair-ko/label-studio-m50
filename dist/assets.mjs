@@ -94,18 +94,18 @@ function split(title, main, sub, symbol, length=40) {
   ]};
 }
 export const templates = [
-  split('工具收納','零件收納','PARTS & TOOLS','box'),
-  split('咖啡罐','深焙咖啡','DARK ROAST','bean'),
-  split('冷凍食品','冷凍保存','FREEZER /  DATE ___','snow',50),
-  split('電子零件','電源線材','POWER CABLES','plug'),
-  split('盆栽識別','迷迭香','ROSEMARY','leaf',30),
+  split('工具收納','零件收納','PARTS & TOOLS','komame/workshop/toolbox'),
+  split('咖啡罐','深焙咖啡','DARK ROAST','komame/kitchen/coffee'),
+  split('冷凍食品','冷凍保存','FREEZER /  DATE ___','komame/parcel/frozen',50),
+  split('電子零件','電源線材','POWER CABLES','komame/electronics/power'),
+  split('盆栽識別','迷迭香','ROSEMARY','komame/pets/sprout',30),
   {title:'圓角姓名貼',length:30,height:templateHeight,items:[
     templateBorder(30,.5,.33),
     txt('你的姓名',2,2.2,26,5,3.5,{bold:true,align:'center'}),
     txt('NAME LABEL',2,8,26,3,1.65,{font:'mono',align:'center'}),
   ]},
   {title:'線材識別',length:30,height:templateHeight,items:[
-    icon('usb',2,3.6,6.8,6.8),
+    icon('komame/electronics/usb',2,3.6,6.8,6.8),
     txt('USB-C',10.5,3,18,5,3.8,{bold:true}),
     txt('DATA & POWER',10.5,8.65,18,3.4,1.4,{font:'mono'}),
   ]},

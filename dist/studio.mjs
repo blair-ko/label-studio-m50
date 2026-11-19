@@ -1,5 +1,6 @@
-import {paths,shapes,symbols,templates,fonts,fontStacks} from './assets.mjs';
-import {normalize,round,clamp,esc,safeVector,iconSVG,graphic,transform,paperArtwork,svgFile,raster,
+import {paths,shapes,templates,fonts,fontStacks} from './assets.mjs';
+import {komameGroups} from './komame-icons.mjs';
+import {normalize,round,clamp,esc,safeVector,iconName,iconSVG,graphic,transform,paperArtwork,svgFile,raster,
   DEFAULT_CORNER_RADIUS,maxCornerRadius,iconStrokeMm,ICON_STROKE_MIN,ICON_STROKE_MAX,
   usesRoundedFont,loadRoundedFont} from './art.mjs';
 import {Printer,makeJob,PRINT_GUIDE_HEIGHT_MM} from './printer.mjs';
@@ -23,6 +24,8 @@ let selected = null;
 const selections = new Map();
 let thumbnailSources = new WeakMap();
 let tab = 'elements';
+let iconCategory = komameGroups[0].id;
+let iconQuery = '';
 let zoom = 1;
 let canvasScale = 1;
 let drag;
@@ -90,7 +93,7 @@ function restore(from,to) {
 }
 const active = () => design.items.find(o=>o.id===selected);
 const assetName = o => o.type==='text' ? (o.text.trim().split('\n')[0] || '空白文字框') :
-  o.type==='icon' ? symbols[o.key].split(' ')[0] : o.type==='shape' ? shapes[o.key] : o.label || '自訂圖案';
+  o.type==='icon' ? iconName(o.key) : o.type==='shape' ? shapes[o.key] : o.label || '自訂圖案';
 
 function loadActiveLabel() {
   design=activeLabel().design;
@@ -231,17 +234,35 @@ function renderLibrary() {
     const example=normalize({length:40,height:14,items:[{type:'shape',key,w:4,h:key==='line'?4:3}]}).items[0];
     return `<button class="asset" data-shape="${key}" title="${label}" aria-label="${label}"><svg viewBox="-.5 -.5 5 5" aria-hidden="true">${graphic(example)}</svg></button>`;
   }).join('');
+  const categories=komameGroups.map(({id,label})=>`<option value="${id}">${esc(label)}</option>`).join('');
   $('assets').innerHTML=`<button class="button secondary add-text" id="add-text"><strong aria-hidden="true">T</strong>新增文字框</button>
     <h3 class="group-label">基本圖形</h3><div class="asset-grid">${group}</div>
-    <h3 class="group-label">向量圖示</h3><input id="search" class="search" type="search" placeholder="搜尋圖示…" aria-label="搜尋圖示">
-    <div id="icons" class="asset-grid"></div>`;
+    <h3 id="icon-heading" class="group-label">向量圖示</h3>
+    <search class="icon-filters" aria-labelledby="icon-heading">
+      <label for="icon-category">圖示主題</label>
+      <select id="icon-category">${categories}<option value="">全部主題</option></select>
+      <label for="search">搜尋圖示</label>
+      <input id="search" type="search" placeholder="輸入中文或英文" autocorrect="off" autocapitalize="none" spellcheck="false">
+    </search>
+    <div id="icons" class="asset-grid komame-grid"></div>
+    <p id="no-icons" class="muted" role="status"></p>`;
+  const category=$('icon-category');
+  const search=$('search');
+  const grid=$('icons');
+  category.value=iconCategory;
+  search.value=iconQuery;
   const renderIcons=()=>{
-    const q=$('search').value.trim().toLowerCase();
-    $('icons').innerHTML=Object.entries(symbols).filter(([key,value])=>(key+' '+value).toLowerCase().includes(q))
-      .map(([key,value])=>`<button class="asset" data-symbol="${key}" title="${value.split(' ')[0]}" aria-label="${value.split(' ')[0]}">${iconSVG(key)}</button>`).join('')
-      || '<p class="muted no-assets">找不到符合的圖示。</p>';
+    const query=iconQuery.trim().toLowerCase();
+    const matches=komameGroups.filter(({id})=>!iconCategory || id===iconCategory)
+      .flatMap(({icons})=>icons)
+      .filter(([key,label])=>`${key.split('/').at(-1).replaceAll('-',' ')} ${label.toLowerCase()}`.includes(query));
+    grid.innerHTML=matches.map(([key,label])=>`<button type="button" class="asset" data-symbol="${key}" title="${esc(label)}" aria-label="${esc(label)}">${iconSVG(key)}</button>`).join('');
+    grid.scrollTop=0;
+    $('no-icons').textContent=matches.length?'':'找不到符合的圖示。';
   };
-  $('search').addEventListener('input',renderIcons); renderIcons();
+  category.addEventListener('change',()=>{iconCategory=category.value;renderIcons();});
+  search.addEventListener('input',()=>{iconQuery=search.value;renderIcons();});
+  renderIcons();
 }
 
 function scale() {

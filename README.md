@@ -14,8 +14,12 @@
 
 在畫布上方的縮圖清單新增、複製或切換標籤。每張有自己的名稱、尺寸和圖層，整個專案會自動儲存在目前瀏覽器。可以下載目前這張或整個專案，匯入的標籤會加入目前的專案。從本機版移到 GitHub Pages 版時，可先下載整個專案，再到網頁版匯入。
 
+素材庫的向量圖示採用 Komame 單色標籤圖庫，12 個主題各有 30 款。先選圖示主題，再用中文名稱或英文關鍵字搜尋。圖示隨應用程式提供，本機版可離線使用。
+
 設計尺寸為長度 10–100 mm、高度 5–14 mm。較窄的設計會在 14 mm 印頭內置中。選擇預切紙時，應使用與紙捲相符的尺寸。點陣輸出採 8 點/mm。列印對話框每次最多送一張，收到裝置回報才會顯示「已確認完成」。只收到資料寫入回覆時，會請你確認是否已出紙。
 
 傳輸基於實機測過的 GATT 端點與 [M50 列印協議](https://github.com/richard-britton/m50-label-bench/blob/main/docs/PROTOCOL.md)。
 
 繁中圓體使用 [justfont Huninn 粉圓](https://github.com/justfont/Huninn)，並以 [opentype.js 1.3.4](https://github.com/opentypejs/opentype.js) 轉為字形輪廓。兩者的授權文件都在 `dist/font-assets/`。
+
+如需重新匯入 Komame 圖庫，可在專案目錄執行 `python3 scripts/build-komame-icons.py <Komame-Icons 本機路徑>`。

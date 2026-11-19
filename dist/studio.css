@@ -28,7 +28,12 @@ h2{font-size:14px;margin:0;font-weight:720}.panel-top{display:flex;align-items:c
 .asset-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .asset{display:grid;place-items:center;height:40px;min-width:0;border-radius:7px;border:1px solid var(--line);color:#374337;background:#fff;padding:0}
 .asset:hover{background:#eaf1e4;border-color:#b6c8ae;color:var(--accent-deep)}.asset svg{width:19px;height:19px}
-.search{width:100%;margin-bottom:9px}.no-assets{grid-column:1/-1}
+.icon-filters{display:grid;gap:4px;margin-bottom:9px}
+.icon-filters :is(input,select){width:100%;border-color:#828d7d}
+.icon-filters select{margin-bottom:4px}
+.asset-grid.komame-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,44px),1fr));max-height:21rem;overflow:auto;padding:4px;margin:-4px}
+.komame-grid .asset{height:44px}.komame-grid .asset svg{width:26px;height:26px}
+@media(pointer:coarse){.icon-filters :is(input,select){font-size:1rem;min-height:48px}}
 .workspace{display:grid;grid-template-rows:auto minmax(320px,1fr) auto;min-width:0;background:#edf0e8}
 .workspace-header{min-width:0}
 .label-strip{display:flex;align-items:center;gap:5px;min-width:0;padding-inline:12px 8px;background:#f0f2ea;border-bottom:1px solid var(--line)}
