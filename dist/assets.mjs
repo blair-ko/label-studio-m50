@@ -1,3 +1,5 @@
+import {PRINT_GUIDE_HEIGHT_MM} from './printer.mjs';
+
 export const paths = {
   box:'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10 M7.5 5l9 4',
   tools:'M14 6l4 4 3-3a6 6 0 0 1-8 7l-6 6a2 2 0 0 1-3-3l6-6a6 6 0 0 1 7-8z',
@@ -76,9 +78,15 @@ export const fontStacks = {
 const txt = (text,x,y,w,h,size,extra={}) => ({type:'text',text,x,y,w,h,size,...extra});
 const icon = (key,x,y,w,h) => ({type:'icon',key,x,y,w,h});
 const shape = (key,x,y,w,h,extra={}) => ({type:'shape',key,x,y,w,h,...extra});
+const templateHeight = 14;
+function templateBorder(length, sideInset, stroke) {
+  // Leave an extra half millimeter inside each guide for the stroke and paper alignment.
+  const verticalInset = (templateHeight - PRINT_GUIDE_HEIGHT_MM) / 2 + .5;
+  return shape('rounded',sideInset,verticalInset,length-2*sideInset,templateHeight-2*verticalInset,{stroke});
+}
 function split(title, main, sub, symbol, length=40) {
-  return {title,length,height:14,items:[
-    shape('rounded',.4,.4,length-.8,13.2,{stroke:.25}),
+  return {title,length,height:templateHeight,items:[
+    templateBorder(length,.4,.25),
     icon(symbol,2.2,3.5,7,7),
     shape('line',11,1.9,.1,10.2,{vertical:true,stroke:.23}),
     txt(main,13,2.4,length-15,5.4,3.6,{bold:true}),
@@ -91,15 +99,15 @@ export const templates = [
   split('冷凍食品','冷凍保存','FREEZER /  DATE ___','snow',50),
   split('電子零件','電源線材','POWER CABLES','plug'),
   split('盆栽識別','迷迭香','ROSEMARY','leaf',30),
-  {title:'圓角姓名貼',length:30,height:14,items:[
-    shape('rounded',.5,.5,29,13,{stroke:.33}),
+  {title:'圓角姓名貼',length:30,height:templateHeight,items:[
+    templateBorder(30,.5,.33),
     txt('你的姓名',2,2.2,26,5,3.5,{bold:true,align:'center'}),
     txt('NAME LABEL',2,8,26,3,1.65,{font:'mono',align:'center'}),
   ]},
-  {title:'線材識別',length:30,height:14,items:[
+  {title:'線材識別',length:30,height:templateHeight,items:[
     icon('usb',2,3.6,6.8,6.8),
     txt('USB-C',10.5,3,18,5,3.8,{bold:true}),
     txt('DATA & POWER',10.5,8.65,18,3.4,1.4,{font:'mono'}),
   ]},
-  {title:'空白標籤',length:40,height:14,items:[]},
+  {title:'空白標籤',length:40,height:templateHeight,items:[]},
 ];

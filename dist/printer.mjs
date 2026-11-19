@@ -2,6 +2,8 @@ export const SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
 export const IO = 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f';
 export const HEAD = 112;
 export const DOTS_PER_MM = 8;
+// Estimated from the M50's measured top and bottom margins.
+export const PRINT_GUIDE_HEIGHT_MM = 12;
 
 export function bitmapFromImage(image) {
   const {width, height, data} = image;

@@ -2,7 +2,7 @@ import {paths,shapes,symbols,templates,fonts,fontStacks} from './assets.mjs';
 import {normalize,round,clamp,esc,safeVector,iconSVG,graphic,transform,paperArtwork,svgFile,raster,
   DEFAULT_CORNER_RADIUS,maxCornerRadius,iconStrokeMm,ICON_STROKE_MIN,ICON_STROKE_MAX,
   usesRoundedFont,loadRoundedFont} from './art.mjs';
-import {Printer,makeJob} from './printer.mjs';
+import {Printer,makeJob,PRINT_GUIDE_HEIGHT_MM} from './printer.mjs';
 import {RESIZE_HANDLES,centeredPosition,resizeObject,rotateAroundSelection,dragRotation,resizeCursor} from './geometry.mjs';
 import {createLabel,createWorkspace,readWorkspace} from './workspace.mjs';
 
@@ -41,8 +41,7 @@ const inlineText = $('inline-text');
 const canvasHelp = $('canvas-help');
 const defaultHelp = canvasHelp.textContent;
 const centerTolerancePx = 5;
-const printGuideHeight = 12; // Estimated from this M50's measured top and bottom margins.
-const guideHelp = () => design.height>printGuideHeight ? `虛線標示預估列印範圍（${printGuideHeight} mm）` : defaultHelp;
+const guideHelp = () => design.height>PRINT_GUIDE_HEIGHT_MM ? `虛線標示預估列印範圍（${PRINT_GUIDE_HEIGHT_MM} mm）` : defaultHelp;
 
 function announce(text,error=false) {
   $('status').textContent = text;
@@ -298,9 +297,9 @@ function updateSelectionGeometry() {
 
 function printMarginGuides() {
   const {length,height,cornerRadius}=design;
-  if (height<=printGuideHeight) return '';
-  const top=round((height-printGuideHeight)/2);
-  const lines=[top,top+printGuideHeight].map(y=>
+  if (height<=PRINT_GUIDE_HEIGHT_MM) return '';
+  const top=round((height-PRINT_GUIDE_HEIGHT_MM)/2);
+  const lines=[top,top+PRINT_GUIDE_HEIGHT_MM].map(y=>
     `<line class="print-margin-guide" x1="0" x2="${length}" y1="${y}" y2="${y}" vector-effect="non-scaling-stroke"/>`
   ).join('');
   return `<defs><clipPath id="margin-guide-cut"><rect width="${length}" height="${height}" rx="${cornerRadius}"/></clipPath></defs>
