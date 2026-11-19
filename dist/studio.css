@@ -103,6 +103,13 @@ dialog{border:1px solid var(--line);border-radius:14px;padding:17px;width:min(42
 .dialog-title{display:flex;justify-content:space-between;align-items:center;margin:0 0 13px}.dialog-title h2{font-size:17px}.dialog-title button{font-size:20px}.dialog-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dialog-note{font-size:12px;line-height:1.55;color:var(--muted)}
 .print-preview{background:#e9eee4;padding:13px;display:grid;place-items:center;border-radius:8px;min-height:85px}.print-preview img{display:block;max-height:110px;max-width:100%;image-rendering:pixelated}
 .dialog-title h2{overflow-wrap:anywhere}
+dialog:modal{overscroll-behavior:contain}
+dialog::backdrop{overflow:hidden;overscroll-behavior:contain}
+#connection-dialog a.button{text-decoration:none}
+.connection-search{width:100%}
+#web-bluetooth-options:not([hidden])+#local-print-options{margin-top:14px;padding-top:2px;border-top:1px solid var(--line)}
+.print-connection-options{margin-top:8px}
+.print-connection-options .button{width:100%}
 @media(min-width:761px){.inspector{contain:size;overflow:auto}}
 @media(max-width:1000px){.studio{grid-template-columns:190px minmax(240px,1fr) 228px}.library{padding-inline:11px}.section{padding-inline:11px}.workspace-top,.workspace-bottom{padding-inline:13px}}
 @media(max-width:760px){.studio{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;min-height:auto}.workspace{grid-column:1/-1;grid-row:1;grid-template-rows:auto minmax(254px,42vh) auto}.library{grid-column:1;grid-row:2}.inspector{grid-column:2;grid-row:2;border-left:0}.masthead{min-height:65px;padding:0 10px}.editing-area{padding:32px 15px}.footer{padding-inline:12px}.brand-mark{width:34px;height:34px}.brand strong{font-size:16px}.brand{gap:7px}.brand span{letter-spacing:0}.button{padding-inline:9px}}

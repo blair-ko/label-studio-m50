@@ -87,11 +87,26 @@
     <button class="button secondary" id="open-project">匯入標籤或專案</button>
   </div>
 </dialog>
+<dialog id="connection-dialog" aria-labelledby="connection-heading">
+  <form method="dialog" class="dialog-title"><h2 id="connection-heading">連接 Kodak M50</h2><button class="icon-button" aria-label="關閉" autofocus>×</button></form>
+  <p class="dialog-note" id="connection-message" role="status"></p>
+  <div id="web-bluetooth-options">
+    <button class="button secondary connection-search" id="search-printer" type="button">搜尋附近的 M50</button>
+  </div>
+  <div id="local-print-options">
+    <p class="dialog-note">在 Mac 上可透過本機版列印。若尚未啟動，先執行「開啟 Label Studio.command」。要列印線上設計，請下載這張設計檔後到本機版匯入。</p>
+    <div class="dialog-grid">
+      <button class="button secondary" id="download-for-local" type="button">下載這張設計檔</button>
+      <a class="button primary" href="http://127.0.0.1:8785/" target="_blank" rel="noopener noreferrer">開啟 Mac 本機版</a>
+    </div>
+  </div>
+</dialog>
 <dialog id="print-dialog" aria-labelledby="print-heading">
   <form method="dialog" class="dialog-title"><h2 id="print-heading">列印標籤</h2><button class="icon-button" aria-label="關閉">×</button></form>
   <div class="print-preview"><img id="print-preview" alt="實際黑白點陣預覽"></div>
-  <p class="dialog-note" id="print-note"></p>
+  <p class="dialog-note" id="print-note" role="status"></p>
   <div class="dialog-grid"><button class="button secondary" id="print-png">下載 PNG</button><button class="button primary" id="print-now">送出 1 張</button></div>
+  <div class="print-connection-options" id="print-connection-options" hidden><button class="button secondary" id="print-connection-help" type="button">查看連線方式</button></div>
 </dialog>
 <input id="graphic-file" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" hidden>
 <input id="project-file" type="file" accept=".json,application/json" hidden>

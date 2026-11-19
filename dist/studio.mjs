@@ -31,6 +31,7 @@ let roundedFontRequested = false;
 let fontRedrawPending = false;
 let printerInfo;
 let connecting = false;
+let connectionError = '';
 let printing = false;
 let pendingArt;
 let localBridge = false;
@@ -765,6 +766,9 @@ function downloadBlob(blob,ext,title) {
   download(url,ext,title);
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function downloadDesign(doc) {
+  downloadBlob(new Blob([JSON.stringify(doc,null,2)],{type:'application/json'}),'json',doc.title);
+}
 
 $('export').onclick=()=>$('export-dialog').showModal();
 $('export-dialog').addEventListener('click',async event=>{
@@ -773,7 +777,7 @@ $('export-dialog').addEventListener('click',async event=>{
   try {
     const current=structuredClone(design);
     if (ext==='svg') downloadBlob(new Blob([await svgFile(current)],{type:'image/svg+xml'}),'svg',current.title);
-    if (ext==='json') downloadBlob(new Blob([JSON.stringify(current,null,2)],{type:'application/json'}),'json',current.title);
+    if (ext==='json') downloadDesign(current);
     if (ext==='project') {
       const projectFile=new Blob([JSON.stringify(snapshotWorkspace(),null,2)],{type:'application/json'});
       downloadBlob(projectFile,'json',current.title+'-標籤專案');
@@ -834,10 +838,13 @@ function changePrinter(state) {
   $('device-dot').classList.toggle('connected',Boolean(state));
   $('connection').textContent=state?(localBridge?'M50 已偵測':'M50 已連線'):'連接 M50';
   if (!state) announce('M50 已中斷連線。');
-  updatePrintDialog();
+  updatePrinterControls();
 }
 const printer=new Printer(changePrinter);
 const isConnected=()=>localBridge ? Boolean(printerInfo) : printer.connected;
+const webBluetooth=typeof navigator.bluetooth?.requestDevice==='function';
+const printDialog=$('print-dialog');
+const connectionDialog=$('connection-dialog');
 
 async function bridgeRequest(path, options={}) {
   const response=await fetch('/api/'+path,{cache:'no-store',...options});
@@ -848,37 +855,61 @@ async function bridgeRequest(path, options={}) {
 if (location.hostname==='127.0.0.1') {
   bridgeRequest('bridge').then(data=>{
     localBridge=data.available===true;
-    updatePrintDialog();
+    updatePrinterControls();
   }).catch(()=>{});
 }
 
-function updatePrintDialog() {
-  const canConnect=localBridge || Boolean(navigator.bluetooth);
+const webBluetoothUnavailable='此瀏覽器無法直接使用網頁藍牙。可改用電腦版 Chrome、Edge，或使用 Mac 本機版。';
+function updatePrinterControls() {
+  const canConnect=localBridge || webBluetooth;
+  $('connect').disabled=printing || (localBridge && connecting);
+  $('web-bluetooth-options').hidden=!webBluetooth;
+  $('search-printer').disabled=connecting || printing;
+  $('search-printer').textContent=connecting?'等待裝置選擇…':'搜尋附近的 M50';
+  $('connection-message').textContent=connecting
+    ? '請在瀏覽器的裝置選單選擇 M50。若沒有選單，可開啟 Mac 本機版。'
+    : connectionError || (webBluetooth?'搜尋後，請在瀏覽器的裝置選單選擇 M50。':webBluetoothUnavailable);
+  $('print-connection-options').hidden=localBridge;
+  $('print-connection-help').disabled=printing;
   $('print-now').disabled=printing || connecting || !canConnect || !pendingArt;
   $('print-now').textContent=printing?'列印中…':isConnected()?'送出 1 張':'連線並列印';
   const details=printerInfo?`M50 · 電量 ${printerInfo.battery}% · ${printerInfo.stock==='Continuous'?'連續紙':printerInfo.stock}。`:'';
-  $('print-note').textContent=canConnect ?
+  $('print-note').textContent=connecting&&!localBridge ? '等待瀏覽器選擇標籤機。若沒有出現選單，可查看連線方式。' :
+    connectionError || (canConnect ?
     `${details}請確認紙卷尺寸與畫布相符。每次送出 1 張，請以實際出紙為準。` :
-    '此瀏覽器可編輯與匯出。藍牙列印請在 Mac 的 Chrome 或 Edge 開啟此頁。';
+    webBluetoothUnavailable);
+}
+function openConnectionOptions() {
+  if (printDialog.open) printDialog.close();
+  updatePrinterControls();
+  connectionDialog.showModal();
 }
 async function connect() {
-  if (!localBridge && !navigator.bluetooth) { announce('此瀏覽器可編輯。請用 Mac 的 Chrome 或 Edge 連接 M50。',true); return false;}
-  connecting=true; $('connect').disabled=true;updatePrintDialog();
+  if (connecting || (!localBridge && !webBluetooth)) return false;
+  connecting=true; connectionError=''; updatePrinterControls();
   try {
     if (localBridge) changePrinter(await bridgeRequest('status'));
     else await printer.connect();
     announce(`已連線到 ${printerInfo.name}。電量 ${printerInfo.battery}%。`);
     return true;
   } catch (error) {
-    announce(error.name==='NotFoundError'?'未選擇標籤機。':error.message,true);
+    connectionError=!localBridge && error.name==='NotFoundError'
+      ? '未選到 M50。請確認電源、距離及手機 App 是否已中斷連線。'
+      : error.message;
+    announce(connectionError,true);
     return false;
-  } finally {connecting=false;$('connect').disabled=printing;updatePrintDialog();}
+  } finally {connecting=false;updatePrinterControls();}
 }
 $('connect').onclick=()=>{
   if (localBridge) void connect();
   else if (printer.connected) printer.close();
-  else void connect();
+  else openConnectionOptions();
 };
+$('search-printer').onclick=async ()=>{
+  if (await connect() && connectionDialog.open) connectionDialog.close();
+};
+$('download-for-local').onclick=()=>downloadDesign(design);
+$('print-connection-help').onclick=openConnectionOptions;
 let previewing=false;
 $('print').onclick=async ()=>{
   if (printing || previewing) return;
@@ -893,33 +924,35 @@ $('print').onclick=async ()=>{
     pendingArt={...preview,title:current.title};
     $('print-heading').textContent=`列印「${current.title}」`;
     $('print-preview').src=pendingArt.canvas.toDataURL('image/png');
-    updatePrintDialog(); $('print-dialog').showModal();
+    updatePrinterControls(); printDialog.showModal();
   } catch (error) {announce(error.message,true);}
   finally {previewing=false;}
 };
 $('print-png').onclick=()=>{if (pendingArt) download(pendingArt.canvas.toDataURL('image/png'),'png',pendingArt.title);};
 $('print-now').onclick=async ()=>{
-  if (!pendingArt || printing) return;
-  printing=true;updatePrintDialog();$('connect').disabled=true;
+  if (!pendingArt || printing || connecting) return;
+  const job=pendingArt;
+  if (!localBridge && !printer.connected && !await connect()) return;
+  if (!printDialog.open || pendingArt!==job) return;
+  printing=true; connectionError=''; updatePrinterControls();
   try {
-    if (!localBridge && !printer.connected && !await connect()) { $('print-dialog').close(); return; }
     $('print-note').textContent='正在傳送點陣資料並等候 M50 完成。';
     let confirmed;
     if (localBridge) {
       const result=await bridgeRequest('print',{
         method:'POST',
         headers:{'Content-Type':'application/octet-stream','X-Print-Id':crypto.randomUUID()},
-        body:makeJob(pendingArt.bytes),
+        body:makeJob(job.bytes),
       });
       if (result.sent!==true) throw Error('無法確認 M50 收到完整資料。');
       confirmed=result.printed===true;
-    } else confirmed=await printer.print(pendingArt.bytes);
-    $('print-dialog').close();
+    } else confirmed=await printer.print(job.bytes);
+    printDialog.close();
     announce(confirmed?'M50 已確認這張標籤列印完成。':'資料已送達 M50，請確認標籤是否已出紙。');
   } catch (error) {
-    announce(error.message,true);$('print-dialog').close();
-  } finally {printing=false;$('connect').disabled=false;updatePrintDialog();}
+    announce(error.message,true);printDialog.close();
+  } finally {printing=false;updatePrinterControls();}
 };
 
 for (const span of document.querySelectorAll('[data-ui-icon]')) if (Object.hasOwn(paths,span.dataset.uiIcon)) span.innerHTML=iconSVG(span.dataset.uiIcon);
-renderLibrary();render();revealActiveTab();updatePrintDialog();
+renderLibrary();render();revealActiveTab();updatePrinterControls();

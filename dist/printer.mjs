@@ -47,7 +47,7 @@ export class Printer {
     if (this.connected) return;
     if (!navigator.bluetooth) throw Error('此瀏覽器不支援藍牙列印。請使用 Mac 的 Chrome 或 Edge。');
     const device = await navigator.bluetooth.requestDevice({
-      filters:[{namePrefix:'Kodak Label_'}], optionalServices:[SERVICE],
+      filters:[{namePrefix:'Kodak Label_'},{services:[SERVICE]}], optionalServices:[SERVICE],
     });
     this.#device = device;
     this.#closed = false;
