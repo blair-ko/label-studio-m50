@@ -2,19 +2,20 @@ export const SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
 export const IO = 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f';
 export const HEAD = 112;
 export const DOTS_PER_MM = 8;
+const RASTER_LINE_BYTES = HEAD / 8;
 // Estimated from the M50's measured top and bottom margins.
 export const PRINT_GUIDE_HEIGHT_MM = 12;
 
 export function bitmapFromImage(image) {
   const {width, height, data} = image;
   if (height > HEAD || width < 1 || width > 800) throw Error('點陣尺寸超出 M50 範圍。');
-  const bytes = new Uint8Array(width * 14);
+  const bytes = new Uint8Array(width * RASTER_LINE_BYTES);
   const top = Math.floor((HEAD - height) / 2);
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
       if (data[(y * width + x) * 4] !== 0) continue;
       const headBit = HEAD - 1 - y - top;
-      bytes[x * 14 + (headBit >> 3)] |= 0x80 >> (headBit & 7);
+      bytes[x * RASTER_LINE_BYTES + (headBit >> 3)] |= 0x80 >> (headBit & 7);
     }
   }
   return bytes;
@@ -28,8 +29,26 @@ export function makeJob(bytes) {
   const job = new Uint8Array(30 + bytes.length);
   job.set([0x10,0xff,0xf1,0x02,0x1d,0x76,0x30,0,14,0,rows & 0xff,rows >> 8],12);
   job.set(bytes,24);
+  // Find the next gap after the artwork. A separate feed before the raster
+  // would advance the label we could print on.
   job.set([0x1d,0x0c,0x10,0xff,0xf1,0x45],24 + bytes.length);
   return job;
+}
+
+export function measuredLabelLength(stock) {
+  const match=/^(\d+)\s*mm$/i.exec(stock ?? '');
+  return match ? Number(match[1]) || null : null;
+}
+
+function fitRasterToLabel(bytes, stock) {
+  const length = measuredLabelLength(stock);
+  if (length === null) return bytes;
+  const limit = length * DOTS_PER_MM * RASTER_LINE_BYTES;
+  if (limit >= bytes.length) return bytes;
+  if (bytes.subarray(limit).some(Boolean)) {
+    throw Error(`M50 量到紙長 ${length} mm，這張圖稿超出可用紙長。請調整畫布或圖稿再送印。`);
+  }
+  return bytes.subarray(0, limit);
 }
 
 export class Printer {
@@ -133,6 +152,8 @@ export class Printer {
     let text = '';
     return this.#exchange(Uint8Array.of(0x10,0xff,0x70),data => {
       text += decoder.decode(data,{stream:true});
+      const start = text.indexOf('M50|');
+      if (start > 0) text = text.slice(start);
       const f = text.split('|');
       const stock = f[8]?.replace(/[^\x20-\x7e].*$/s,'').trim();
       if (f.length < 9 || !/^(Continuous|\d+\s*mm)$/i.test(stock)) return;
@@ -142,8 +163,10 @@ export class Printer {
 
   async print(bytes) {
     const status = await this.status();
+    if (status.model !== 'M50') throw Error('這台裝置未回報 M50 型號。');
     if (status.state !== 'ready') throw Error('M50 回報 '+status.state+'。請檢查紙捲與上蓋。');
-    return this.#exchange(makeJob(bytes),data => {
+    const job = makeJob(fitRasterToLabel(bytes, status.stock));
+    return this.#exchange(job,data => {
       for (let i=0; i<data.length; i++) {
         if (data[i] === 0xff) { i++; continue; }
         if (data[i] === 0xaa) return true;

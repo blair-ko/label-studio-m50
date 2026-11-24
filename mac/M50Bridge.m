@@ -3,6 +3,10 @@
 
 static NSString *const Service = @"E7810A71-73AE-499D-8C15-FAA9AEF0C3F2";
 static NSString *const Characteristic = @"BEF8D6C9-9C21-4C9E-B632-BD58C1009F9F";
+static const NSUInteger RasterHeaderBytes = 24;
+static const NSUInteger RasterLineBytes = 14;
+static const NSUInteger DotsPerMillimeter = 8;
+static const NSUInteger JobEndBytes = 6;
 
 @interface M50Bridge : NSObject <CBCentralManagerDelegate, CBPeripheralDelegate>
 @property CBCentralManager *central;
@@ -131,6 +135,10 @@ static NSString *const Characteristic = @"BEF8D6C9-9C21-4C9E-B632-BD58C1009F9F";
     [self.statusBytes appendData:data];
     if (self.statusBytes.length > 512) { [self fail:@"收到的狀態格式無法辨識。"]; return; }
     NSString *status = [[NSString alloc] initWithData:self.statusBytes encoding:NSISOLatin1StringEncoding];
+    NSRange modelStart = [status rangeOfString:@"M50|"];
+    if (modelStart.location != NSNotFound && modelStart.location > 0) {
+        status = [status substringFromIndex:modelStart.location];
+    }
     NSArray<NSString *> *fields=[status componentsSeparatedByString:@"|"];
     if (fields.count < 9) return;
     NSRange stockRange=[fields[8] rangeOfString:@"^(Continuous|[0-9]+[ ]*mm)" options:NSRegularExpressionSearch];
@@ -141,9 +149,34 @@ static NSString *const Characteristic = @"BEF8D6C9-9C21-4C9E-B632-BD58C1009F9F";
     [self startJobIfReady];
 }
 
+- (BOOL)fitJobToLabel {
+    NSInteger length = [self.deviceInfo[@"stock"] integerValue];
+    if (length <= 0 || length >= 100) return YES;
+    NSUInteger limit = (NSUInteger)length * DotsPerMillimeter * RasterLineBytes;
+    NSUInteger bitmapLength = self.job.length - RasterHeaderBytes - JobEndBytes;
+    if (limit >= bitmapLength) return YES;
+    const uint8_t *bytes = self.job.bytes;
+    for (NSUInteger i = limit; i < bitmapLength; i++) {
+        if (bytes[RasterHeaderBytes + i] != 0) {
+            [self fail:[NSString stringWithFormat:@"M50 量到紙長 %ld mm，這張圖稿超出可用紙長。請調整畫布或圖稿再送印。", (long)length]];
+            return NO;
+        }
+    }
+    uint16_t rows = (uint16_t)length * DotsPerMillimeter;
+    NSMutableData *job = [NSMutableData dataWithBytes:bytes length:RasterHeaderBytes + limit];
+    uint8_t *header = job.mutableBytes;
+    header[22] = rows & 0xff;
+    header[23] = rows >> 8;
+    // Preserve the one gap advance following the printed raster.
+    [job appendBytes:bytes + RasterHeaderBytes + bitmapLength length:JobEndBytes];
+    self.job = job;
+    return YES;
+}
+
 - (void)startJobIfReady {
     if (!self.statusWritten || !self.deviceInfo || !self.job || self.sentJob) return;
     if (![self.deviceInfo[@"state"] isEqualToString:@"ready"]) { [self fail:@"M50 尚未就緒。請檢查上蓋與紙捲。"]; return; }
+    if (![self fitJobToLabel]) return;
     // The no-response maximum is the negotiated single-packet payload. A
     // larger acknowledged write can turn into a queued ATT long write.
     NSUInteger packet = [self.printer maximumWriteValueLengthForType:CBCharacteristicWriteWithoutResponse];

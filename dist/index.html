@@ -7,7 +7,7 @@
 <meta name="description" content="為 Kodak M50 設計、編輯並列印自訂標籤。">
 <title>Label Studio · 標籤製作</title>
 <link rel="icon" href="mark.svg" type="image/svg+xml">
-<link rel="stylesheet" href="studio.css">
+<link rel="stylesheet" href="studio.css?v=20261125-5">
 </head>
 <body>
 <header class="masthead">
@@ -51,7 +51,7 @@
     <div class="editing-area" id="editing-area" role="tabpanel" aria-label="目前標籤" tabindex="0">
       <div class="size-ruler"><span></span><output id="ruler"></output><span></span></div>
       <div id="paper" class="paper">
-        <svg id="art" xmlns="http://www.w3.org/2000/svg" aria-label="標籤設計"></svg>
+        <svg id="art" xmlns="http://www.w3.org/2000/svg" aria-label="標籤設計" aria-describedby="canvas-help"></svg>
         <textarea id="inline-text" aria-label="編輯畫布文字" maxlength="500" hidden></textarea>
       </div>
       <p id="canvas-help" class="canvas-help">白色區域為標籤範圍</p>
@@ -103,7 +103,7 @@
 </dialog>
 <dialog id="print-dialog" aria-labelledby="print-heading">
   <form method="dialog" class="dialog-title"><h2 id="print-heading">列印標籤</h2><button class="icon-button" aria-label="關閉">×</button></form>
-  <div class="print-preview"><img id="print-preview" alt="實際黑白點陣預覽"></div>
+  <div class="print-preview"><img id="print-preview" alt="黑白列印預覽"></div>
   <p class="dialog-note" id="print-note" role="status"></p>
   <div class="dialog-grid"><button class="button secondary" id="print-png">下載 PNG</button><button class="button primary" id="print-now">送出 1 張</button></div>
   <div class="print-connection-options" id="print-connection-options" hidden><button class="button secondary" id="print-connection-help" type="button">查看連線方式</button></div>
@@ -111,6 +111,6 @@
 <input id="graphic-file" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" hidden>
 <input id="project-file" type="file" accept=".json,application/json" hidden>
 <noscript>請啟用 JavaScript 以使用標籤編輯器。</noscript>
-<script type="module" src="studio.mjs"></script>
+<script type="module" src="studio.mjs?v=20261125-5"></script>
 </body>
 </html>

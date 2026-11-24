@@ -18,6 +18,10 @@
 
 設計尺寸為長度 10–100 mm、高度 5–14 mm。較窄的設計會在 14 mm 印頭內置中。選擇預切紙時，應使用與紙捲相符的尺寸。點陣輸出採 8 點/mm。列印對話框每次最多送一張，收到裝置回報才會顯示「已確認完成」。只收到資料寫入回覆時，會請你確認是否已出紙。
 
+預切標籤印完會自動對齊下一張的間隙。換捲或冷開機後，若 M50 尚未量到紙長，會用首張實際列印定位。送印前若已讀到紙長，只會裁掉超出紙長的空白。若有圖稿越界，會在送紙前停止並提示。
+
+高度超過 12 mm 的標籤會在畫布上以兩條水平虛線標示預估可印範圍，列印預覽依照同一範圍呈現。
+
 傳輸基於實機測過的 GATT 端點與 [M50 列印協議](https://github.com/richard-britton/m50-label-bench/blob/main/docs/PROTOCOL.md)。
 
 繁中圓體使用 [justfont Huninn 粉圓](https://github.com/justfont/Huninn)，並以 [opentype.js 1.3.4](https://github.com/opentypejs/opentype.js) 轉為字形輪廓。兩者的授權文件都在 `dist/font-assets/`。

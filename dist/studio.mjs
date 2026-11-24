@@ -1,11 +1,11 @@
-import {paths,shapes,templates,fonts,fontStacks} from './assets.mjs';
+import {paths,shapes,templates,fonts,fontStacks} from './assets.mjs?v=20261125-5';
 import {komameGroups} from './komame-icons.mjs';
-import {normalize,round,clamp,esc,safeVector,iconName,iconSVG,graphic,transform,paperArtwork,svgFile,raster,
+import {normalize,round,clamp,esc,safeVector,iconName,iconSVG,graphic,transform,paperArtwork,paperClip,printArea,svgFile,raster,
   DEFAULT_CORNER_RADIUS,maxCornerRadius,iconStrokeMm,ICON_STROKE_MIN,ICON_STROKE_MAX,
-  usesRoundedFont,loadRoundedFont} from './art.mjs';
-import {Printer,makeJob,PRINT_GUIDE_HEIGHT_MM} from './printer.mjs';
+  usesRoundedFont,loadRoundedFont} from './art.mjs?v=20261125-5';
+import {Printer,makeJob,measuredLabelLength,PRINT_GUIDE_HEIGHT_MM} from './printer.mjs?v=20261125-5';
 import {RESIZE_HANDLES,centeredPosition,resizeObject,rotateAroundSelection,dragRotation,resizeCursor} from './geometry.mjs';
-import {createLabel,createWorkspace,readWorkspace} from './workspace.mjs';
+import {createLabel,createWorkspace,readWorkspace} from './workspace.mjs?v=20261125-5';
 
 const $ = id => document.getElementById(id);
 const projectKey = 'label-studio-m50.project.v1';
@@ -35,6 +35,7 @@ let fontRedrawPending = false;
 let printerInfo;
 let connecting = false;
 let connectionError = '';
+let printError = '';
 let printing = false;
 let pendingArt;
 let localBridge = false;
@@ -45,7 +46,7 @@ const inlineText = $('inline-text');
 const canvasHelp = $('canvas-help');
 const defaultHelp = canvasHelp.textContent;
 const centerTolerancePx = 5;
-const guideHelp = () => design.height>PRINT_GUIDE_HEIGHT_MM ? `虛線標示預估列印範圍（${PRINT_GUIDE_HEIGHT_MM} mm）` : defaultHelp;
+const guideHelp = () => design.height>PRINT_GUIDE_HEIGHT_MM ? `上下虛線標示預估可印範圍（${PRINT_GUIDE_HEIGHT_MM} mm）` : defaultHelp;
 
 function announce(text,error=false) {
   $('status').textContent = text;
@@ -108,7 +109,7 @@ function activateLabel(id) {
 function updateLabelThumbnail(button, doc, changed=false) {
   if (!changed && thumbnailSources.get(button)===doc) return;
   button.querySelector('.label-tab-preview').innerHTML=
-    `<svg viewBox="0 0 ${doc.length} ${doc.height}">${paperArtwork(doc,'preview-cut-'+button.dataset.labelId)}</svg>`;
+    `<svg viewBox="0 0 ${doc.length} ${doc.height}">${paperArtwork(doc,'preview-cut-'+button.dataset.labelId,printArea(doc))}</svg>`;
   thumbnailSources.set(button,doc);
 }
 function renderLabelTabs() {
@@ -225,7 +226,7 @@ function renderLibrary() {
     const gallery=[...templates,...customTemplates];
     $('assets').innerHTML=`<div class="template-grid">${gallery.map((entry,index)=>{
       const example=normalize(entry);
-      return `<button class="template" data-template="${index}"><svg viewBox="0 0 ${example.length} ${example.height}" aria-hidden="true">${paperArtwork(example,'template-cut-'+index)}</svg>${esc(entry.title)}</button>`;
+      return `<button class="template" data-template="${index}"><svg viewBox="0 0 ${example.length} ${example.height}" aria-hidden="true">${paperArtwork(example,'template-cut-'+index,printArea(example))}</svg>${esc(entry.title)}</button>`;
     }).join('')}</div><button id="save-template" class="button secondary save-template">儲存目前設計為樣板</button>`;
     ensureRoundedFont();
     return;
@@ -317,15 +318,12 @@ function updateSelectionGeometry() {
   outline.querySelector('.rotation-pivot').setAttribute('transform',`translate(${cx} ${cy}) scale(${px})`);
 }
 
-function printMarginGuides() {
-  const {length,height,cornerRadius}=design;
-  if (height<=PRINT_GUIDE_HEIGHT_MM) return '';
-  const top=round((height-PRINT_GUIDE_HEIGHT_MM)/2);
-  const lines=[top,top+PRINT_GUIDE_HEIGHT_MM].map(y=>
-    `<line class="print-margin-guide" x1="0" x2="${length}" y1="${y}" y2="${y}" vector-effect="non-scaling-stroke"/>`
+function printMarginGuides({y:top,height}) {
+  if (top<=0) return '';
+  const lines=[top,top+height].map(y=>
+    `<line class="print-margin-guide" x1="0" x2="${design.length}" y1="${y}" y2="${y}" vector-effect="non-scaling-stroke"/>`
   ).join('');
-  return `<defs><clipPath id="margin-guide-cut"><rect width="${length}" height="${height}" rx="${cornerRadius}"/></clipPath></defs>
-    <g clip-path="url(#margin-guide-cut)" aria-hidden="true">${lines}</g>`;
+  return `<g clip-path="url(#editor-print-cut-outline)" aria-hidden="true">${lines}</g>`;
 }
 
 function renderArt() {
@@ -333,7 +331,9 @@ function renderArt() {
   ensureRoundedFont();
   art.setAttribute('viewBox',`0 0 ${design.length} ${design.height}`);
   const focusId=document.activeElement?.closest?.('[data-hit]')?.dataset.hit;
-  const elements=design.items.map(o=>`<g data-draw="${o.id}" data-editing="${inlineEdit?.id===o.id}" transform="${transform(o)}"><g class="object-ink">${graphic(o)}</g><rect class="object-hit" data-hit="${o.id}" x="0" y="0" width="${o.w}" height="${o.h}" fill="transparent" vector-effect="non-scaling-stroke" tabindex="0" role="button" aria-pressed="${o.id===selected}" aria-label="${esc(assetName(o))}。使用方向鍵移動。${o.type==='text'?'按 Enter 編輯文字。':''}"/></g>`).join('');
+  const area=printArea(design);
+  const artwork=design.items.map(o=>`<g data-draw="${o.id}" data-editing="${inlineEdit?.id===o.id}" transform="${transform(o)}"><g class="object-ink">${graphic(o)}</g></g>`).join('');
+  const hitTargets=design.items.map(o=>`<rect class="object-hit" data-hit="${o.id}" transform="${transform(o)}" width="${o.w}" height="${o.h}" fill="transparent" vector-effect="non-scaling-stroke" tabindex="0" role="button" aria-pressed="${o.id===selected}" aria-label="${esc(assetName(o))}。使用方向鍵移動。${o.type==='text'?'按 Enter 編輯文字。':''}"/>`).join('');
   const o=active();
   const selection=o && !inlineEdit ? `<g id="selection-outline" aria-hidden="true" transform="${transform(o)}">
     <rect class="selection-edge" fill="none" vector-effect="non-scaling-stroke"/>
@@ -350,7 +350,9 @@ function renderArt() {
       </g>
     </g>
   </g>` : '';
-  art.innerHTML=`${printMarginGuides()}${elements}${selection}<g aria-hidden="true">
+  art.innerHTML=`${paperClip(design,'editor-print-cut',area)}
+    <g clip-path="url(#editor-print-cut)" pointer-events="none">${artwork}</g>
+    ${printMarginGuides(area)}${hitTargets}${selection}<g aria-hidden="true">
     <line id="center-x" class="alignment-guide" x1="${design.length/2}" x2="${design.length/2}" y1="0" y2="${design.height}" vector-effect="non-scaling-stroke" visibility="hidden"/>
     <line id="center-y" class="alignment-guide" x1="0" x2="${design.length}" y1="${design.height/2}" y2="${design.height/2}" vector-effect="non-scaling-stroke" visibility="hidden"/>
   </g>`;
@@ -656,13 +658,14 @@ art.addEventListener('pointerdown',event=>{
   const bounds=art.getBoundingClientRect();
   const [x,y]=point(event,bounds);
   const drawing=art.querySelector(`[data-draw="${id}"]`);
+  const hit=art.querySelector(`[data-hit="${id}"]`);
   const frame=selectionBounds(object,drawing.querySelector('.object-ink'));
   drag={pointer:event.pointerId,id,mode,direction,frame,x,y,clientX:event.clientX,clientY:event.clientY,
     scaleX:bounds.width/design.length,scaleY:bounds.height/design.height,
     centerTarget:centeredPosition(object,frame,design.length,design.height),
-    initial:{...object},old:snapshotWorkspace(),drawing,
+    initial:{...object},old:snapshotWorkspace(),drawing,hit,
     outline:$('selection-outline'),moved:false,snapX:false,snapY:false};
-  drawing.querySelector('[data-hit]').focus({preventScroll:true});
+  hit.focus({preventScroll:true});
   art.setPointerCapture(event.pointerId);
 });
 function updateDrag(event) {
@@ -688,6 +691,7 @@ function updateDrag(event) {
     applyRotation(object,drag.initial,drag.frame,angle);
     const placement=transform(object);
     drag.drawing.setAttribute('transform',placement);
+    drag.hit.setAttribute('transform',placement);
     drag.outline.setAttribute('transform',placement);
     updateSelectionGeometry();
     art.classList.add('is-rotating');
@@ -700,6 +704,7 @@ function updateDrag(event) {
   position(object,snapX?middleX:nextX,snapY?middleY:nextY);
   const placement=transform(object);
   drag.drawing.setAttribute('transform',placement);
+  drag.hit.setAttribute('transform',placement);
   drag.outline.setAttribute('transform',placement);
   art.classList.add('is-moving');
   if (snapX!==drag.snapX || snapY!==drag.snapY) {
@@ -894,11 +899,15 @@ function updatePrinterControls() {
   $('print-connection-help').disabled=printing;
   $('print-now').disabled=printing || connecting || !canConnect || !pendingArt;
   $('print-now').textContent=printing?'列印中…':isConnected()?'送出 1 張':'連線並列印';
-  const details=printerInfo?`M50 · 電量 ${printerInfo.battery}% · ${printerInfo.stock==='Continuous'?'連續紙':printerInfo.stock}。`:'';
-  $('print-note').textContent=connecting&&!localBridge ? '等待瀏覽器選擇標籤機。若沒有出現選單，可查看連線方式。' :
-    connectionError || (canConnect ?
-    `${details}請確認紙卷尺寸與畫布相符。每次送出 1 張，請以實際出紙為準。` :
-    webBluetoothUnavailable);
+  const stock=printerInfo?.stock;
+  const length=measuredLabelLength(stock);
+  const paper=stock==='Continuous'?'M50 回報使用連續紙，請確認畫布長度。':
+    length!==null?`M50 量到紙長 ${length} mm。印完後會對齊下一張。`:
+    stock?'M50 尚未量到紙長，首張會按畫布尺寸列印並定位。':
+    '預切標籤印完後會自動找下一張的間隙。';
+  const note=connecting&&!localBridge ? '等待瀏覽器選擇標籤機。若沒有出現選單，可查看連線方式。' :
+    printError || connectionError || (canConnect ? paper : webBluetoothUnavailable);
+  if ($('print-note').textContent!==note) $('print-note').textContent=note;
 }
 function openConnectionOptions() {
   if (printDialog.open) printDialog.close();
@@ -939,12 +948,13 @@ $('print').onclick=async ()=>{
   const current=structuredClone(design);
   previewing=true;
   try {
-    const preview=await raster(current);
+    const preview=await raster(current,printArea(current));
     if (workspace.activeId!==labelId || document.querySelector('dialog[open]')) return;
     if (!preview.bytes.some(Boolean)) throw Error('目前的標籤沒有可列印的黑色內容。');
+    printError='';
     pendingArt={...preview,title:current.title};
+    $('print-preview').src=preview.canvas.toDataURL('image/png');
     $('print-heading').textContent=`列印「${current.title}」`;
-    $('print-preview').src=pendingArt.canvas.toDataURL('image/png');
     updatePrinterControls(); printDialog.showModal();
   } catch (error) {announce(error.message,true);}
   finally {previewing=false;}
@@ -953,11 +963,12 @@ $('print-png').onclick=()=>{if (pendingArt) download(pendingArt.canvas.toDataURL
 $('print-now').onclick=async ()=>{
   if (!pendingArt || printing || connecting) return;
   const job=pendingArt;
+  printError='';
   if (!localBridge && !printer.connected && !await connect()) return;
   if (!printDialog.open || pendingArt!==job) return;
   printing=true; connectionError=''; updatePrinterControls();
   try {
-    $('print-note').textContent='正在傳送點陣資料並等候 M50 完成。';
+    $('print-note').textContent='正在檢查紙長並列印這一張…';
     let confirmed;
     if (localBridge) {
       const result=await bridgeRequest('print',{
@@ -971,7 +982,8 @@ $('print-now').onclick=async ()=>{
     printDialog.close();
     announce(confirmed?'M50 已確認這張標籤列印完成。':'資料已送達 M50，請確認標籤是否已出紙。');
   } catch (error) {
-    announce(error.message,true);printDialog.close();
+    printError=error.message;
+    if (!printDialog.open) announce(printError,true);
   } finally {printing=false;updatePrinterControls();}
 };
 

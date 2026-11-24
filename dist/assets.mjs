@@ -1,4 +1,4 @@
-import {PRINT_GUIDE_HEIGHT_MM} from './printer.mjs';
+import {PRINT_GUIDE_HEIGHT_MM} from './printer.mjs?v=20261125-5';
 
 export const paths = {
   box:'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10 M7.5 5l9 4',
@@ -79,14 +79,15 @@ const txt = (text,x,y,w,h,size,extra={}) => ({type:'text',text,x,y,w,h,size,...e
 const icon = (key,x,y,w,h) => ({type:'icon',key,x,y,w,h});
 const shape = (key,x,y,w,h,extra={}) => ({type:'shape',key,x,y,w,h,...extra});
 const templateHeight = 14;
-function templateBorder(length, sideInset, stroke) {
-  // Leave an extra half millimeter inside each guide for the stroke and paper alignment.
+function templateBorder(length, stroke) {
+  // Keep the stroke clear of the measured print limits and center the frame on the paper.
+  const sideInset = 1;
   const verticalInset = (templateHeight - PRINT_GUIDE_HEIGHT_MM) / 2 + .5;
   return shape('rounded',sideInset,verticalInset,length-2*sideInset,templateHeight-2*verticalInset,{stroke});
 }
 function split(title, main, sub, symbol, length=40) {
   return {title,length,height:templateHeight,items:[
-    templateBorder(length,.4,.25),
+    templateBorder(length,.25),
     icon(symbol,2.2,3.5,7,7),
     shape('line',11,1.9,.1,10.2,{vertical:true,stroke:.23}),
     txt(main,13,2.4,length-15,5.4,3.6,{bold:true}),
@@ -100,7 +101,7 @@ export const templates = [
   split('電子零件','電源線材','POWER CABLES','komame/electronics/power'),
   split('盆栽識別','迷迭香','ROSEMARY','komame/pets/sprout',30),
   {title:'圓角姓名貼',length:30,height:templateHeight,items:[
-    templateBorder(30,.5,.33),
+    templateBorder(30,.33),
     txt('你的姓名',2,2.2,26,5,3.5,{bold:true,align:'center'}),
     txt('NAME LABEL',2,8,26,3,1.65,{font:'mono',align:'center'}),
   ]},

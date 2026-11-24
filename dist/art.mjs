@@ -1,6 +1,6 @@
-import {fontStacks,paths,shapes,symbols} from './assets.mjs';
+import {fontStacks,paths,shapes,symbols} from './assets.mjs?v=20261125-5';
 import {komameIcons} from './komame-icons.mjs';
-import {DOTS_PER_MM, bitmapFromImage} from './printer.mjs';
+import {DOTS_PER_MM,PRINT_GUIDE_HEIGHT_MM,bitmapFromImage} from './printer.mjs?v=20261125-5';
 
 export const round = value => Number(value.toFixed(2));
 export const clamp = (value,min,max) => Math.min(max,Math.max(min,value));
@@ -219,20 +219,29 @@ export function graphic(o) {
 }
 
 export const transform = o => `translate(${o.x} ${o.y}) rotate(${o.rotation} ${o.w/2} ${o.h/2})`;
-export function paperArtwork(doc, clipId) {
-  const outline = `width="${doc.length}" height="${doc.height}" rx="${doc.cornerRadius}"`;
-  const artwork = doc.items.map(o=>`<g transform="${transform(o)}">${graphic(o)}</g>`).join('');
-  return `<defs><clipPath id="${clipId}"><rect ${outline}/></clipPath></defs><rect ${outline} fill="white"/><g clip-path="url(#${clipId})">${artwork}</g>`;
+const paperOutline = doc => `width="${doc.length}" height="${doc.height}" rx="${doc.cornerRadius}"`;
+export function printArea(doc) {
+  const height=Math.min(doc.height,PRINT_GUIDE_HEIGHT_MM);
+  return {y:(doc.height-height)/2,height};
 }
-export async function svgFile(doc) {
+export function paperClip(doc, id, area) {
+  const outlineId=area?`${id}-outline`:id;
+  return `<defs><clipPath id="${outlineId}"><rect ${paperOutline(doc)}/></clipPath>${area?
+    `<clipPath id="${id}" clip-path="url(#${outlineId})"><rect y="${area.y}" width="${doc.length}" height="${area.height}"/></clipPath>`:''}</defs>`;
+}
+export function paperArtwork(doc, clipId, area) {
+  const artwork = doc.items.map(o=>`<g transform="${transform(o)}">${graphic(o)}</g>`).join('');
+  return `${paperClip(doc,clipId,area)}<rect ${paperOutline(doc)} fill="white"/><g clip-path="url(#${clipId})">${artwork}</g>`;
+}
+export async function svgFile(doc, area) {
   if (usesRoundedFont(doc)) await loadRoundedFont();
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${doc.length}mm" height="${doc.height}mm" viewBox="0 0 ${doc.length} ${doc.height}" overflow="hidden">${paperArtwork(doc,'label-cut')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${doc.length}mm" height="${doc.height}mm" viewBox="0 0 ${doc.length} ${doc.height}" overflow="hidden">${paperArtwork(doc,'label-cut',area)}</svg>`;
 }
 
-export async function raster(doc) {
+export async function raster(doc, area) {
   await document.fonts.ready;
   const width=Math.round(doc.length*DOTS_PER_MM), height=Math.round(doc.height*DOTS_PER_MM);
-  const url=URL.createObjectURL(new Blob([await svgFile(doc)],{type:'image/svg+xml;charset=utf-8'}));
+  const url=URL.createObjectURL(new Blob([await svgFile(doc,area)],{type:'image/svg+xml;charset=utf-8'}));
   const image=new Image();
   try {
     image.src=url;
