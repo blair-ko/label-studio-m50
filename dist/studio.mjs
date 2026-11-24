@@ -1,11 +1,11 @@
 import {paths,shapes,templates,fonts,fontStacks} from './assets.mjs?v=20261125-5';
 import {komameGroups} from './komame-icons.mjs';
-import {normalize,round,clamp,esc,safeVector,iconName,iconSVG,graphic,transform,paperArtwork,paperClip,printArea,svgFile,raster,
+import {normalize,round,clamp,esc,safeVector,iconName,iconSVG,graphic,transform,paperArtwork,clipPaperArtwork,printArea,svgFile,raster,
   DEFAULT_CORNER_RADIUS,maxCornerRadius,iconStrokeMm,ICON_STROKE_MIN,ICON_STROKE_MAX,
-  usesRoundedFont,loadRoundedFont} from './art.mjs?v=20261125-5';
+  usesRoundedFont,loadRoundedFont} from './art.mjs?v=20261125-6';
 import {Printer,makeJob,measuredLabelLength,PRINT_GUIDE_HEIGHT_MM} from './printer.mjs?v=20261125-5';
 import {RESIZE_HANDLES,centeredPosition,resizeObject,rotateAroundSelection,dragRotation,resizeCursor} from './geometry.mjs';
-import {createLabel,createWorkspace,readWorkspace} from './workspace.mjs?v=20261125-5';
+import {createLabel,createWorkspace,readWorkspace} from './workspace.mjs?v=20261125-6';
 
 const $ = id => document.getElementById(id);
 const projectKey = 'label-studio-m50.project.v1';
@@ -323,7 +323,7 @@ function printMarginGuides({y:top,height}) {
   const lines=[top,top+height].map(y=>
     `<line class="print-margin-guide" x1="0" x2="${design.length}" y1="${y}" y2="${y}" vector-effect="non-scaling-stroke"/>`
   ).join('');
-  return `<g clip-path="url(#editor-print-cut-outline)" aria-hidden="true">${lines}</g>`;
+  return `<g clip-path="url(#editor-print-cut)" aria-hidden="true">${lines}</g>`;
 }
 
 function renderArt() {
@@ -350,8 +350,7 @@ function renderArt() {
       </g>
     </g>
   </g>` : '';
-  art.innerHTML=`${paperClip(design,'editor-print-cut',area)}
-    <g clip-path="url(#editor-print-cut)" pointer-events="none">${artwork}</g>
+  art.innerHTML=`<g pointer-events="none">${clipPaperArtwork(design,'editor-print-cut',artwork,area)}</g>
     ${printMarginGuides(area)}${hitTargets}${selection}<g aria-hidden="true">
     <line id="center-x" class="alignment-guide" x1="${design.length/2}" x2="${design.length/2}" y1="0" y2="${design.height}" vector-effect="non-scaling-stroke" visibility="hidden"/>
     <line id="center-y" class="alignment-guide" x1="0" x2="${design.length}" y1="${design.height/2}" y2="${design.height/2}" vector-effect="non-scaling-stroke" visibility="hidden"/>

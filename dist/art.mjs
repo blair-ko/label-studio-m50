@@ -224,14 +224,18 @@ export function printArea(doc) {
   const height=Math.min(doc.height,PRINT_GUIDE_HEIGHT_MM);
   return {y:(doc.height-height)/2,height};
 }
-export function paperClip(doc, id, area) {
-  const outlineId=area?`${id}-outline`:id;
-  return `<defs><clipPath id="${outlineId}"><rect ${paperOutline(doc)}/></clipPath>${area?
-    `<clipPath id="${id}" clip-path="url(#${outlineId})"><rect y="${area.y}" width="${doc.length}" height="${area.height}"/></clipPath>`:''}</defs>`;
+export function clipPaperArtwork(doc, id, artwork, area) {
+  const outline=`<clipPath id="${id}"><rect ${paperOutline(doc)}/></clipPath>`;
+  if (!area) return `<defs>${outline}</defs><g clip-path="url(#${id})">${artwork}</g>`;
+
+  const printId=`${id}-printable`;
+  const printable=`<clipPath id="${printId}"><rect y="${area.y}" width="${doc.length}" height="${area.height}"/></clipPath>`;
+  // WebKit can trim strokes to the artwork's geometry bounds when a clipPath references another clipPath.
+  return `<defs>${outline}${printable}</defs><g clip-path="url(#${id})"><g clip-path="url(#${printId})">${artwork}</g></g>`;
 }
 export function paperArtwork(doc, clipId, area) {
   const artwork = doc.items.map(o=>`<g transform="${transform(o)}">${graphic(o)}</g>`).join('');
-  return `${paperClip(doc,clipId,area)}<rect ${paperOutline(doc)} fill="white"/><g clip-path="url(#${clipId})">${artwork}</g>`;
+  return `<rect ${paperOutline(doc)} fill="white"/>${clipPaperArtwork(doc,clipId,artwork,area)}`;
 }
 export async function svgFile(doc, area) {
   if (usesRoundedFont(doc)) await loadRoundedFont();

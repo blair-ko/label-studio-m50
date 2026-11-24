@@ -1,4 +1,4 @@
-import {normalize} from './art.mjs?v=20261125-5';
+import {normalize} from './art.mjs?v=20261125-6';
 
 const newId = () => crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
 export const createLabel = design => ({id:newId(),design});
